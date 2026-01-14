@@ -22,6 +22,8 @@ export const Header = () => {
 };
 
 function DesktopHeader() {
+  const { open } = useSidebar();
+
   return (
     <header
       className={cn(
@@ -36,10 +38,18 @@ function DesktopHeader() {
         "border-border",
         "bg-sidebar",
         "pr-3",
-        "justify-end",
         "z-40"
       )}
     >
+      <SidebarTrigger
+        className={cn("text-muted-foreground", "ml-3", {
+          "opacity-100": !open,
+          "opacity-0": open,
+          "pointer-events-auto": !open,
+          "pointer-events-none": open,
+        })}
+      />
+      <div className={cn("flex-1")} />
       <ThemeToggle />
       <UserDropdown />
     </header>
