@@ -1,69 +1,51 @@
-import {
-  BaseRecord,
-  DataProvider,
-  GetListParams,
-  GetListResponse,
-} from "@refinedev/core";
+import { BACKEND_BASE_URL } from "@/constants";
+import { ListResponse } from "@/types";
+import { CreateDataProviderOptions, createDataProvider } from "@refinedev/rest";
 
-const mockSubjects = [
-  {
-    id: 1,
-    name: "Introduction to Computer Science",
-    code: "CS101",
-    description: "Fundamental concepts of programming and computer science.",
-    department: "CS",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 2,
-    name: "Linear Algebra",
-    code: "MATH201",
-    description: "Study of vectors, matrices, and linear transformations.",
-    department: "Math",
-    createdAt: new Date().toISOString(),
-  },
-  {
-    id: 3,
-    name: "English Literature",
-    code: "ENG102",
-    description: "Analysis of major works of English literature.",
-    department: "English",
-    createdAt: new Date().toISOString(),
-  },
-];
+if (!BACKEND_BASE_URL) {
+  throw new Error(
+    "BACKEND_BASE_URL is not defined. Please define it in the .env file."
+  );
+}
 
-export const dataProvider: DataProvider = {
-  getList: async <TData extends BaseRecord = BaseRecord>({
-    resource,
-  }: GetListParams): Promise<GetListResponse<TData>> => {
-    if (resource !== "subjects") return { data: [] as TData[], total: 0 };
+const options: CreateDataProviderOptions = {
+  getList: {
+    getEndpoint: ({ resource }) => resource,
 
-    return {
-      data: mockSubjects as unknown as TData[],
-      total: mockSubjects.length,
-    };
-  },
+    buildQueryParams: async ({ resource, pagination, filters }) => {
+      const page = pagination?.currentPage ?? 1;
+      const pageSize = pagination?.pageSize ?? 10;
 
-  getOne: async () => {
-    {
-      throw new Error("This function is not present in mock");
-    }
-  },
-  create: async () => {
-    {
-      throw new Error("This function is not present in mock");
-    }
-  },
-  update: async () => {
-    {
-      throw new Error("This function is not present in mock");
-    }
-  },
-  deleteOne: async () => {
-    {
-      throw new Error("This function is not present in mock");
-    }
-  },
+      const params: Record<string, string | number> = { page, limit: pageSize };
 
-  getApiUrl: () => "",
+      filters?.forEach((filter) => {
+        const field = "field" in filter ? filter.field : "";
+
+        const value = String(filter.value);
+
+        if (resource === "subjects") {
+          if (field === "department") params.department = value;
+          if (field === "name") params.search = value;
+        }
+      });
+
+      return params;
+    },
+
+    mapResponse: async (response) => {
+      const payload: ListResponse = await response.clone().json();
+
+      return payload.data ?? [];
+    },
+
+    getTotalCount: async (response) => {
+      const payload: ListResponse = await response.clone().json();
+
+      return payload.pagination?.total ?? payload.data?.length ?? 0;
+    },
+  },
 };
+
+const { dataProvider } = createDataProvider(BACKEND_BASE_URL, options);
+
+export { dataProvider };
